@@ -21,12 +21,12 @@ from azure.ai.agents.telemetry import trace_function
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 import time
-# from opentelemetry.instrumentation.openai_v2 import OpenAIInstrumentor
+from opentelemetry.instrumentation.openai_v2 import OpenAIInstrumentor
 
 # # Enable Azure Monitor tracing
 application_insights_connection_string = os.environ["APPLICATIONINSIGHTS_CONNECTION_STRING"]
-# configure_azure_monitor(connection_string=application_insights_connection_string)
-# OpenAIInstrumentor().instrument()
+configure_azure_monitor(connection_string=application_insights_connection_string)
+OpenAIInstrumentor().instrument()
 
 # scenario = os.path.basename(__file__)
 # tracer = trace.get_tracer(__name__)
@@ -42,13 +42,13 @@ from app.servers.mcp_inventory_client import get_mcp_client
 _mcp_server_url = os.getenv("MCP_SERVER_URL", "http://localhost:8000/mcp-inventory/sse")
 
 # MCP-based tool wrapper functions
-async def mcp_create_image(prompt: str) -> str:
+async def mcp_create_image(prompt: str, image_url: str = "") -> str:
     """
     Generate an AI image based on a text description using DALL-E.
     
     Args:
-        prompt: Detailed description of the image to generate
-        size: Image size (e.g., '1024x1024'), defaults to '1024x1024'
+        prompt: Detailed description of the image to generate or edit
+        image_url: Optional URL of an existing image to edit. If not provided, generates a new image.
     
     Returns:
         URL or path to the generated image
@@ -60,7 +60,7 @@ async def mcp_create_image(prompt: str) -> str:
     asyncio.set_event_loop(loop)
     try:
         result = loop.run_until_complete(
-            mcp_client.call_tool("generate_product_image", {"prompt": prompt})
+            mcp_client.call_tool("generate_product_image", {"prompt": prompt, "image_url": image_url})
         )
         return result
     finally:

@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 class IntentClassification(BaseModel):
     """Structured output for intent classification."""
     domain: str = Field(
-        description="Target domain: cora, interior_designer, inventory_agent, customer_loyalty, or cart_manager"
+        description="Target domain: cora, interior_designer, interior_designer_create_image, inventory_agent, customer_loyalty, or cart_manager"
     )
     is_domain_change: bool = Field(
         description="Whether this represents a change from the current domain"
@@ -46,7 +46,11 @@ AGENT_DOMAINS = {
     },
     "interior_designer": {
         "name": "Interior Design Specialist",
-        "description": "Room design, color schemes, furniture recommendations, image creation"
+        "description": "Room design, color schemes, furniture recommendations"
+    },
+    "interior_designer_create_image": {
+        "name": "Interior Design Image Generator",
+        "description": "Image creation and generation for room designs"
     },
     "inventory_agent": {
         "name": "Inventory Specialist",
@@ -67,10 +71,11 @@ INTENT_CLASSIFIER_PROMPT = """You are an intent classifier for Zava shopping ass
 
 Available domains:
 1. cora: General shopping, product browsing, general questions
-2. interior_designer: Room design, decorating, color schemes, furniture recommendations, image creation
-3. inventory_agent: Product availability, stock checks, inventory questions
-4. customer_loyalty: Discounts, promotions, loyalty programs, customer benefits
-5. cart_manager: Shopping cart operations (add/remove items, view cart, checkout)
+2. interior_designer: Room design, decorating, color schemes, furniture recommendations (advice only, NO image generation)
+3. interior_designer_create_image: Image creation and generation - ONLY use when user explicitly requests to CREATE, GENERATE, MAKE, or SEE an image/visual/picture
+4. inventory_agent: Product availability, stock checks, inventory questions
+5. customer_loyalty: Discounts, promotions, loyalty programs, customer benefits
+6. cart_manager: Shopping cart operations (add/remove items, view cart, checkout)
 
 Analyze the user's message and determine:
 1. Which domain it belongs to
@@ -81,14 +86,16 @@ User message: {user_message}
 
 Respond with JSON:
 {{
-    "domain": "cora|interior_designer|inventory_agent|customer_loyalty|cart_manager",
+    "domain": "cora|interior_designer|interior_designer_create_image|inventory_agent|customer_loyalty|cart_manager",
     "is_domain_change": true|false,
     "confidence": 0.0-1.0,
     "reasoning": "brief explanation"
 }}
 
 Rules:
+- If user says "create an image", "generate an image", "make an image", "show me what it looks like", "paint this room" -> interior_designer_create_image domain
 - If user mentions "cart", "add to cart", "remove from cart", "checkout", "view cart" -> cart_manager domain
+- If user asks about design, colors, furniture but NOT for an actual image -> interior_designer domain
 - If uncertain, default to current domain with low confidence
 - Detect explicit requests to "talk to someone else" or "get help with X" as domain changes
 - Consider context: if discussing design, stay in interior_designer unless user explicitly changes topic

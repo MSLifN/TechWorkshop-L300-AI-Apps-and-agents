@@ -75,18 +75,18 @@ def get_customer_discount(customer_id: str) -> str:
     return json.dumps(result) if not isinstance(result, str) else result
 
 @mcp.tool()
-def generate_product_image(prompt: str, size: str = "1024x1024") -> str:
+def generate_product_image(prompt: str, image_url: str = "") -> str:
     """
     Generate an AI image based on a text description using DALL-E.
     
     Args:
-        prompt: Detailed description of the image to generate
-        size: Image size (e.g., '1024x1024'), defaults to '1024x1024'
+        prompt: Detailed description of the image to generate or edit
+        image_url: Optional URL of an existing image to edit. If not provided, generates a new image.
     
     Returns:
         URL or path to the generated image
     """
-    result = create_image(prompt, size)
+    result = create_image(prompt, image_url)
     return json.dumps(result) if not isinstance(result, str) else result
 
 
