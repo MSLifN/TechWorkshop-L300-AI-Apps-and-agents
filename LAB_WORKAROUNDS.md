@@ -333,4 +333,122 @@ Follow Exercise 02 instructions as written - use `gpt-5-mini` for all agents inc
 
 ---
 
+## Azure App Service Deployment with Managed Identity
+
+### Issue
+When deploying the Docker container to Azure App Service, the application cannot authenticate to Azure services (AI Foundry, Cosmos DB, Storage) using local Azure CLI credentials. WebSocket connections work but agents don't respond.
+
+### Error Message
+No visible error - chat UI loads but messages receive no responses from agents.
+
+### Root Cause
+- Docker containers in Azure App Service run in isolated environments without access to local Azure CLI credentials
+- The application uses `DefaultAzureCredential()` which requires proper authentication configuration
+- Without managed identity and role assignments, the app cannot access Azure AI Foundry, Cosmos DB, or Storage resources
+
+### Solution
+Configure Azure App Service with managed identity and assign necessary roles:
+
+#### Step 1: Configure App Service with Container Image
+```bash
+# Set the container image from Azure Container Registry
+az webapp config container set \
+  --name <app-service-name> \
+  --resource-group <resource-group> \
+  --container-image-name <acr-name>.azurecr.io/chat-app:latest \
+  --container-registry-url https://<acr-name>.azurecr.io \
+  --container-registry-user <acr-username> \
+  --container-registry-password <acr-password>
+```
+
+#### Step 2: Enable System-Assigned Managed Identity
+```bash
+# Enable managed identity for the App Service
+az webapp identity assign \
+  --name <app-service-name> \
+  --resource-group <resource-group>
+```
+
+This command returns a `principalId` - save this for the next step.
+
+#### Step 3: Assign Required Azure Roles
+```bash
+# Get the managed identity principal ID from Step 2
+PRINCIPAL_ID="<principal-id-from-step-2>"
+
+# Assign Cognitive Services User role (for agent operations)
+az role assignment create \
+  --assignee "$PRINCIPAL_ID" \
+  --role "Cognitive Services User" \
+  --scope "/subscriptions/<sub-id>/resourceGroups/<rg>/providers/Microsoft.CognitiveServices/accounts/<ai-foundry-name>"
+
+# Assign Azure AI Developer role (for AI Foundry access)
+az role assignment create \
+  --assignee "$PRINCIPAL_ID" \
+  --role "Azure AI Developer" \
+  --scope "/subscriptions/<sub-id>/resourceGroups/<rg>/providers/Microsoft.CognitiveServices/accounts/<ai-foundry-name>"
+
+# Assign Storage Blob Data Contributor (for blob storage access)
+az role assignment create \
+  --assignee "$PRINCIPAL_ID" \
+  --role "Storage Blob Data Contributor" \
+  --scope "/subscriptions/<sub-id>/resourceGroups/<rg>"
+```
+
+#### Step 4: Configure Port (if needed)
+```bash
+# Set the port for the App Service (if not auto-detected)
+az webapp config appsettings set \
+  --name <app-service-name> \
+  --resource-group <resource-group> \
+  --settings WEBSITES_PORT=8000
+```
+
+#### Step 5: Restart App Service
+```bash
+# Restart to apply all changes
+az webapp restart \
+  --name <app-service-name> \
+  --resource-group <resource-group>
+```
+
+### Continuous Deployment Setup
+
+To automatically deploy when code changes are pushed to GitHub:
+
+#### Update GitHub Actions Workflow
+
+Add these steps to your `.github/workflows/deploy-to-acr.yml` file after the Docker push step:
+
+```yaml
+      - name: Login to Azure
+        uses: azure/login@v2.1.1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Restart App Service to pull new image
+        run: |
+          az webapp restart --name <app-service-name> --resource-group <resource-group>
+```
+
+This ensures that every time you push code changes to the `src/` directory:
+1. GitHub Actions builds a new Docker image
+2. Pushes it to Azure Container Registry
+3. Restarts the App Service to pull and run the latest image
+
+### Verification
+
+After completing all steps:
+1. Wait 60-90 seconds for the App Service to fully start
+2. Navigate to `https://<app-service-name>.azurewebsites.net`
+3. Test the chat interface - agents should now respond properly
+4. Check Application Insights for telemetry data
+
+### Lab Impact
+- Exercise 04 Task 04_02 Step 5 (Optional production deployment)
+- Exercise 05 Task 05_01 (ACR deployment workflow)
+- Required for running the application in Azure App Service instead of locally
+
+---
+
 **Last Updated**: December 11, 2025
