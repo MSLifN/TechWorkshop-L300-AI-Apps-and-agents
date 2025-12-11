@@ -1,6 +1,6 @@
 # Azure imports
 from azure.identity import DefaultAzureCredential
-from azure.ai.evaluation.red_team import RedTeam, RiskCategory
+from azure.ai.evaluation.red_team import RedTeam, RiskCategory, AttackStrategy
 from pyrit.prompt_target import OpenAIChatTarget
 import os
 import asyncio
@@ -38,6 +38,11 @@ chat_target = OpenAIChatTarget(
 )
 
 async def main():
-    red_team_result = await red_team_agent.scan(target=chat_target)
+    red_team_result = await red_team_agent.scan(
+        target=chat_target,
+        scan_name="Red Team Scan - Easy Strategies",
+        attack_strategies=[
+            AttackStrategy.EASY
+        ])
 
 asyncio.run(main())
