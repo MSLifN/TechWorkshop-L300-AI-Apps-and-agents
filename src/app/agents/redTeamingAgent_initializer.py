@@ -1,6 +1,6 @@
 # Azure imports
 from azure.identity import DefaultAzureCredential
-from azure.ai.evaluation.red_team import RedTeam, RiskCategory, AttackStrategy
+from azure.ai.evaluation.red_team import RedTeam, RiskCategory
 from pyrit.prompt_target import OpenAIChatTarget
 import os
 import asyncio
@@ -23,14 +23,10 @@ red_team_agent = RedTeam(
     num_objectives=5,
 )
 
-chat_target = OpenAIChatTarget(
-    model_name=os.environ.get("gpt_deployment"),
-    endpoint=f"{os.environ.get('gpt_endpoint')}/openai/deployments/{os.environ.get('gpt_deployment')}/chat/completions",
-    api_key=os.environ.get("gpt_api_key"),
-    api_version=os.environ.get("gpt_api_version"),
-)
+def test_chat_target(query: str) -> str:
+    return "I am a simple AI assistant that follows ethical guidelines. I'm sorry, Dave. I'm afraid I can't do that."
 
 async def main():
-    red_team_result = await red_team_agent.scan(target=chat_target)
+    red_team_result = await red_team_agent.scan(target=test_chat_target)
 
 asyncio.run(main())
