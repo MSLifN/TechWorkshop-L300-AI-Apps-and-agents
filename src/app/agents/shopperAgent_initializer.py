@@ -29,7 +29,7 @@ project_client.agents.enable_auto_function_calls(tools=functions)
 
 initialize_agent(
     project_client=project_client,
-    model=os.environ["AZURE_AI_AGENT_MODEL_DEPLOYMENT_NAME"],
+    model=os.environ["phi_4_deployment"],
     env_var_name="cora",
     name="Cora - Zava Shopping Assistant",
     instructions=CORA_PROMPT,
