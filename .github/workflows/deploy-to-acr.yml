@@ -39,3 +39,12 @@ jobs:
           cd src/
           docker build -t ${{ env.AZURE_CONTAINER_REGISTRY }}/${{ env.IMAGE_NAME }}:latest .
           docker push ${{ env.AZURE_CONTAINER_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+      - name: Login to Azure
+        uses: azure/login@v2.1.1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Restart App Service to pull new image
+        run: |
+          az webapp restart --name gw5ehcx5adkvc-app --resource-group techworkshop-l300-ai-agents
